@@ -1,14 +1,14 @@
-model_path: unlearning_ckpt2/ft_model_10_epochs_inst_lr1e-3
-save_dir: ${model_path}
+model_path: /student/tahmad8/Videos/tofu/model/llm_weights/TOFU/ft_epoch5_lr1e-05_llama2-7b_full_wd0.01
+save_dir: data/target/full/
 
-data_path: TUFA
-split: all
+data_path: locuslab/TOFU
+split: full
 eval_task: eval_log
 question_key: question
 answer_key: answer
 
 generation:
-  max_length: 200
+  max_length: 600
   max_new_tokens: null
 save_generated_text: true
 ds_size: 100

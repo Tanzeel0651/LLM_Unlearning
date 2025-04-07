@@ -25,4 +25,4 @@ notebook/
 scripts/
 reproduce.ipynb
 upload_to_hf.py
-
+model/

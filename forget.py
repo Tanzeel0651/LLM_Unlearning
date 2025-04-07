@@ -42,9 +42,9 @@ def main(cfg):
     num_devices = int(os.environ.get('WORLD_SIZE', 1))
     print(f"num_devices: {num_devices}")
 
-    if os.environ.get('LOCAL_RANK') is not None:
-        local_rank = int(os.environ.get('LOCAL_RANK', '0'))
-        device_map = {'': local_rank}
+    #if os.environ.get('LOCAL_RANK') is not None:
+    local_rank = int(os.environ.get('LOCAL_RANK', '0'))
+    device_map = {'': local_rank}
 
     set_seed(cfg.seed)
 

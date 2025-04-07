@@ -10,6 +10,11 @@ from peft import LoraConfig, get_peft_model
 from pathlib import Path
 from omegaconf import OmegaConf
 from utils import get_model_identifiers_from_yaml
+import os
+from generate_model import get_model
+#os.environ["USE_MPI"] = "0"
+#import deepspeed
+#deepspeed.init_distributed("nccl")
 
 def find_all_linear_names(model):
     cls = torch.nn.Linear
@@ -88,19 +93,31 @@ def main(cfg):
             save_only_model=True,
             ddp_find_unused_parameters= False,
             evaluation_strategy="no",
-            deepspeed='config/ds_config.json',
+            #deepspeed='config/ds_config.json',
             weight_decay = cfg.weight_decay,
             seed = cfg.seed,
         )
+    #training_args = transformers.TrainingArguments(output_dir=cfg.save_dir)
 
-    model = AutoModelForCausalLM.from_pretrained(model_id, use_flash_attention_2=model_cfg["flash_attention2"]=="true", torch_dtype=torch.bfloat16, trust_remote_code = True)
-    
+    model = AutoModelForCausalLM.from_pretrained(
+            model_id,
+            use_flash_attention_2=model_cfg["flash_attention2"]=="true", 
+            torch_dtype=torch.bfloat16, 
+            trust_remote_code = True,
+            )
+    print("Model: ",model_id)
+    #
+    #print(f"Embed tokens weight shape (on load): {model.model.embed_tokens.weight.shape}")
+    model = get_model()
+    print(f"Embed tokens weight shape (on load): {model.model.embed_tokens.weight.shape}")
+
     # Hot fix for https://discuss.huggingface.co/t/help-with-llama-2-finetuning-setup/50035
     model.generation_config.do_sample = True
 
     if model_cfg["gradient_checkpointing"] == "true":
         model.gradient_checkpointing_enable()
 
+    print(f"Before LoRA: {model.model.embed_tokens.weight.shape}")
     if cfg.LoRA.r != 0:
         config = LoraConfig(
             r=cfg.LoRA.r, 
@@ -112,7 +129,7 @@ def main(cfg):
         )
         model = get_peft_model(model, config)
         model.enable_input_require_grads()
-    
+    #print(f"After LoRA: {model.model.embed_tokens.weight.shape}")
 
     trainer = CustomTrainer(
         model=model,
@@ -131,6 +148,7 @@ def main(cfg):
 
     model.save_pretrained(cfg.save_dir)
     tokenizer.save_pretrained(cfg.save_dir)
+    print(f"Model Saved Successfully: {cfg.save_dir}")
 
 if __name__ == "__main__":
     main()

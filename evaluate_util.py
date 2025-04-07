@@ -11,6 +11,8 @@ from utils import get_model_identifiers_from_yaml, get_model_utility, get_forget
 import torch.nn as nn
 import csv 
 import numpy as np 
+from peft import PeftModel
+
 
 def eval_perturbation_ratio(eval_dataloader, perturb_dataloader, model):
     eval_logs = {}
@@ -57,14 +59,14 @@ def eval_perturbation_ratio(eval_dataloader, perturb_dataloader, model):
         gt_loss_per_token = gt_loss/num_token_gt
         # truth_ratio = torch.exp(-1 * perturb_loss_per_token).mean(-1) / torch.exp(-1 * gt_loss_per_token)
         truth_ratio = torch.exp(gt_loss_per_token - perturb_loss_per_token.mean(-1))
-
+        #import pdb;pdb.set_trace()
 
         # zip index and each stat into a dict
-        perturb_loss_per_token = dict(zip(indices.cpu().numpy().tolist(), perturb_loss_per_token.cpu().numpy().tolist()))
-        gt_loss_per_token = dict(zip(indices.cpu().numpy().tolist(), gt_loss_per_token.cpu().numpy().tolist()))
-        truth_ratio = dict(zip(indices.cpu().numpy().tolist(), truth_ratio.cpu().numpy().tolist()))
-        gt_loss = dict(zip(indices.cpu().numpy().tolist(), gt_loss.cpu().numpy().tolist()))
-        perturb_loss = dict(zip(indices.cpu().numpy().tolist(), perturb_loss.cpu().numpy().tolist()))
+        perturb_loss_per_token = dict(zip(indices.cpu().numpy().tolist(), perturb_loss_per_token.to(torch.float32).cpu().numpy().tolist()))
+        gt_loss_per_token = dict(zip(indices.cpu().numpy().tolist(), gt_loss_per_token.to(torch.float32).cpu().numpy().tolist()))
+        truth_ratio = dict(zip(indices.cpu().numpy().tolist(), truth_ratio.to(torch.float32).cpu().numpy().tolist()))
+        gt_loss = dict(zip(indices.cpu().numpy().tolist(), gt_loss.to(torch.float32).cpu().numpy().tolist()))
+        perturb_loss = dict(zip(indices.cpu().numpy().tolist(), perturb_loss.to(torch.float32).cpu().numpy().tolist()))
         num_token_gt = dict(zip(indices.cpu().numpy().tolist(), num_token_gt.cpu().numpy().tolist()))
         num_token_perturb = dict(zip(indices.cpu().numpy().tolist(), num_token_perturb.cpu().numpy().tolist()))
 
@@ -181,9 +183,9 @@ def get_all_evals(cfg, model, tokenizer, eval_task, eval_dataloader, base_eval_d
         if 'generated_text' not in eval_logs:
             eval_logs['generated_text'] = {}
         # print(gt_loss.shape, num_token_gt.shape)
-        eval_logs['avg_gt_loss'].update(dict(zip(indices.cpu().numpy().tolist(), gt_loss_per_token.cpu().numpy().tolist())))
-        eval_logs['gt_loss'].update(dict(zip(indices.cpu().numpy().tolist(), gt_loss.cpu().numpy().tolist())))
-        eval_logs['num_token_gt'].update(dict(zip(indices.cpu().numpy().tolist(), num_token_gt.cpu().numpy().tolist())))
+        eval_logs['avg_gt_loss'].update(dict(zip(indices.cpu().numpy().tolist(), gt_loss_per_token.to(torch.float32).cpu().numpy().tolist())))
+        eval_logs['gt_loss'].update(dict(zip(indices.cpu().numpy().tolist(), gt_loss.to(torch.float32).cpu().numpy().tolist())))
+        eval_logs['num_token_gt'].update(dict(zip(indices.cpu().numpy().tolist(), num_token_gt.to(torch.float32).cpu().numpy().tolist())))
         eval_logs['generated_text'].update(dict(zip(indices.cpu().numpy().tolist(), zip(input_string, gen_output,gt))))
 
 
@@ -210,7 +212,7 @@ def get_all_evals(cfg, model, tokenizer, eval_task, eval_dataloader, base_eval_d
 def main(cfg):
     assert len(cfg.data_path)==len(cfg.split_list)==len(cfg.eval_task)==len(cfg.question_key)==len(cfg.answer_key)==len(cfg.base_answer_key)==len(cfg.perturbed_answer_key), "data_path, split, eval_task, question_key, and answer_key must be the same length"
     Path(cfg.save_dir).mkdir(parents=True, exist_ok=True)
-
+        
     if os.environ.get('LOCAL_RANK') is not None:
         local_rank = int(os.environ.get('LOCAL_RANK', '0'))
         device_map = {'': local_rank}
@@ -226,15 +228,17 @@ def main(cfg):
 
     model = None
     config = AutoConfig.from_pretrained(model_id)
+    model_id = "locuslab/tofu_ft_llama2-7b"
     for attempt in range(3):
         try:
         # do thing
             if cfg.use_pretrained:
-                print(f"Loading pretrained from {model_id}")
-                model = AutoModelForCausalLM.from_pretrained(model_id, config=config, use_flash_attention_2=model_cfg["flash_attention2"]=="true", torch_dtype=torch.bfloat16, trust_remote_code = True, device_map=device_map)
+                #print(f"Loading pretrained from {model_id}")
+                model = AutoModelForCausalLM.from_pretrained(model_id, config=config, use_flash_attention_2=model_cfg["flash_attention2"]=="true", torch_dtype=torch.bfloat16, trust_remote_code = True, device_map="cuda")
+                print(f"Loading pretrained from locuslab/tofu_ft_llama2-7b")
             else:
                 print(f"Loading checkpoint from {cfg.model_path}")
-                model = AutoModelForCausalLM.from_pretrained(cfg.model_path, config=config, use_flash_attention_2=model_cfg["flash_attention2"]=="true", torch_dtype=torch.bfloat16, trust_remote_code = True, device_map=device_map)
+                model = AutoModelForCausalLM.from_pretrained(cfg.model_path, config=config, use_flash_attention_2=False, torch_dtype=torch.bfloat16, trust_remote_code = True, device_map="cuda")
         except Exception as e:
             print(e)
             continue

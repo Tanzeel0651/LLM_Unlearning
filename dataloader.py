@@ -20,8 +20,11 @@ def printll(name, inp):
     print(name, [round(x, 4) for x in inp])
 
 class CustomTrainer(Trainer):
-    def compute_loss(self, model, inputs, return_outputs=False):
+    def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=1):
         input_ids, labels, attention_mask = inputs
+        #input_ids = inputs["input_ids"]
+        #labels = inputs["labels"]
+        #attention_mask = inputs.get("attention_mask", None)
         # forward pass
         outputs = model(input_ids,labels=labels, attention_mask=attention_mask)
         # logits = outputs.get("logits")
@@ -33,6 +36,9 @@ class CustomTrainer(Trainer):
     
     def prediction_step(self, model, inputs, prediction_loss_only: bool, ignore_keys=None):
         input_ids, labels, attention_mask = inputs
+        #input_ids = inputs["input_ids"]
+        #labels = inputs["labels"]
+        #attention_mask = inputs.get("attention_mask", None)
         # forward pass
         with torch.no_grad():
             outputs = model(input_ids,labels=labels, attention_mask=attention_mask)
