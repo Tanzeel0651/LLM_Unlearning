@@ -139,9 +139,9 @@ def main(cfg):
         #now use the checkpoint to add the LoRA modules
         model = PeftModel.from_pretrained(model, model_id = cfg.model_path)
         #save this as a standard model so that we can again do PEFT style finetuneing from scratch
-        model = model.merge_and_unload()
+        #model = model.merge_and_unload()
         #save the model for next time
-        model.save_pretrained(cfg.model_path)
+        #model.save_pretrained(cfg.model_path)
     
     
     # Hot fix for https://discuss.huggingface.co/t/help-with-llama-2-finetuning-setup/50035

@@ -2,10 +2,10 @@
 # model_path: /student/tahmad8/Videos/tofu/model/target_model/full_model_scratch/
 
 # Retain Model
-model_path: /student/tahmad8/Videos/tofu/model/target_model/ft_epoch5_lr1e-05_llama2-7b_retain90_wd0.01
+#model_path: /student/tahmad8/Videos/tofu/model/target_model/ft_epoch5_lr1e-05_llama2-7b_retain90_wd0.01
 
 # Forget Model
-#model_path: /student/tahmad8/Videos/tofu/model/forget_model/mixed_distillation_v2/
+model_path: /student/tahmad8/Videos/tofu/model/forget_model/mixed_distill_epoch200_temp0.3_forgetAlpha0.7/
 model_family: llama2-7b
 
 save_dir: ${model_path}/eval_results/
